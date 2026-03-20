@@ -23,9 +23,9 @@ The goal of this project is to **digitize personal finance tracking** by providi
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** (Add your tech here — e.g., React / Flutter / Android)
-* **Backend:** (e.g., Node.js / Spring Boot)
-* **Database:** (e.g., MongoDB / Firebase / SQLite)
+* **Frontend:** (Add your tech here — e.g., React )
+* **Backend:** (e.g., Node.js )
+* **Database:** (e.g., PostgresSQL)
 
 ---
 
