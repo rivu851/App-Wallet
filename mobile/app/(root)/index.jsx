@@ -1,9 +1,9 @@
-import { SignedIn, SignedOut, useUser } from "@clerk/clerk-expo";
-import { Link, useRouter } from "expo-router";
+import { useUser } from "@clerk/clerk-expo";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from "react-native";
 import { SignOutButton } from "@/components/SignOutButton";
 import { useTransactions } from "../../hooks/useTransactions";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageLoader from "../../components/PageLoader";
 import { styles } from "../../assets/styles/home.styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,8 +15,10 @@ export default function Page() {
   const { user } = useUser();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [source, setSource] = useState("own");
+  const [undoEntry, setUndoEntry] = useState(null);
 
-  const { transactions, summary, isLoading, loadData, deleteTransaction } = useTransactions(
+  const { transactions, summary, isLoading, isOnline, pendingCount, loadData, deleteTransaction, restoreTransaction } = useTransactions(
     user.id
   );
 
@@ -26,16 +28,38 @@ export default function Page() {
     setRefreshing(false);
   };
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData]));
 
   const handleDelete = (id) => {
     Alert.alert("Delete Transaction", "Are you sure you want to delete this transaction?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteTransaction(id) },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const result = await deleteTransaction(id);
+          if (result?.history_id) setUndoEntry({ id, historyId: result.history_id });
+        },
+      },
     ]);
   };
+
+  const handleEdit = (item) => {
+    router.push({
+      pathname: "/create",
+      params: {
+        id: item.id,
+        title: item.title,
+        amount: String(item.amount),
+        category: item.category,
+        source: item.source || "own",
+      },
+    });
+  };
+
+  const visibleTransactions = transactions.filter((item) => (item.source || "own") === source);
 
   if (isLoading && !refreshing) return <PageLoader />;
 
@@ -60,6 +84,9 @@ export default function Page() {
           </View>
           {/* RIGHT */}
           <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.historyButton} onPress={() => router.push("/history")}>
+              <Ionicons name="time-outline" size={21} color="#263238" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.addButton} onPress={() => router.push("/create")}>
               <Ionicons name="add" size={20} color="#FFF" />
               <Text style={styles.addButtonText}>Add</Text>
@@ -68,7 +95,43 @@ export default function Page() {
           </View>
         </View>
 
-        <BalanceCard summary={summary} />
+        <View style={styles.connectionStatus}>
+          <Text style={styles.connectionText}>
+            {isOnline ? "Online" : "Offline"}{pendingCount > 0 ? ` · ${pendingCount} waiting to sync` : ""}
+          </Text>
+        </View>
+
+        <View style={styles.sourceTabs}>
+          {[
+            { id: "own", label: "My money" },
+            { id: "father", label: "Dad's money" },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[styles.sourceTab, source === option.id && styles.sourceTabActive]}
+              onPress={() => setSource(option.id)}
+            >
+              <Text style={[styles.sourceTabText, source === option.id && styles.sourceTabTextActive]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <BalanceCard summary={summary} source={source} />
+
+        {undoEntry && (
+          <View style={styles.undoBar}>
+            <Text style={styles.undoText}>Transaction deleted</Text>
+            <TouchableOpacity
+              onPress={async () => {
+                if (await restoreTransaction(undoEntry.id, undoEntry.historyId)) setUndoEntry(null);
+              }}
+            >
+              <Text style={styles.undoAction}>Undo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.transactionsHeaderContainer}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -80,8 +143,8 @@ export default function Page() {
       <FlatList
         style={styles.transactionsList}
         contentContainerStyle={styles.transactionsListContent}
-        data={transactions}
-        renderItem={({ item }) => <TransactionItem item={item} onDelete={handleDelete} />}
+        data={visibleTransactions}
+        renderItem={({ item }) => <TransactionItem item={item} onDelete={handleDelete} onEdit={handleEdit} />}
         ListEmptyComponent={<NoTransactionsFound />}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

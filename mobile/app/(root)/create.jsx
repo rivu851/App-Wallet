@@ -4,16 +4,16 @@ import {
   Alert,
   TouchableOpacity,
   TextInput,
-  ActivityIndicatorBase,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
 import { useState } from "react";
 import { API_URL } from "../../constants/api";
 import { styles } from "../../assets/styles/create.styles";
 import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { submitTransaction } from "../../lib/offlineTransactions";
 
 const CATEGORIES = [
   { id: "food", name: "Food & Drinks", icon: "fast-food" },
@@ -28,11 +28,14 @@ const CATEGORIES = [
 const CreateScreen = () => {
   const router = useRouter();
   const { user } = useUser();
+  const params = useLocalSearchParams();
+  const isEditing = Boolean(params.id);
 
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [isExpense, setIsExpense] = useState(true);
+  const [title, setTitle] = useState(params.title || "");
+  const [amount, setAmount] = useState(params.amount ? String(Math.abs(Number(params.amount))) : "");
+  const [selectedCategory, setSelectedCategory] = useState(params.category || "");
+  const [source, setSource] = useState(params.source || "own");
+  const [isExpense, setIsExpense] = useState(!params.amount || Number(params.amount) < 0);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -52,26 +55,32 @@ const CreateScreen = () => {
         ? -Math.abs(parseFloat(amount))
         : Math.abs(parseFloat(amount));
 
-      const response = await fetch(`${API_URL}/transactions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: user.id,
-          title,
-          amount: formattedAmount,
-          category: selectedCategory,
-        }),
-      });
+      const payload = {
+        user_id: user.id,
+        title: title.trim(),
+        amount: formattedAmount,
+        category: selectedCategory,
+        source,
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log(errorData);
-        throw new Error(errorData.error || "Failed to create transaction");
+      if (isEditing) {
+        const response = await fetch(`${API_URL}/transactions/${params.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Failed to update transaction");
+        }
+        Alert.alert("Saved", "Transaction updated");
+      } else {
+        const result = await submitTransaction(payload);
+        Alert.alert(
+          result.queued ? "Saved offline" : "Success",
+          result.queued ? "This entry will sync when you are back online." : "Transaction created successfully"
+        );
       }
-
-      Alert.alert("Success", "Transaction created successfully");
       router.back();
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to create transaction");
@@ -88,7 +97,7 @@ const CreateScreen = () => {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Transaction</Text>
+        <Text style={styles.headerTitle}>{isEditing ? "Edit Transaction" : "New Transaction"}</Text>
         <TouchableOpacity
           style={[styles.saveButtonContainer, isLoading && styles.saveButtonDisabled]}
           onPress={handleCreate}
@@ -100,7 +109,29 @@ const CreateScreen = () => {
       </View>
 
       <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Money source</Text>
         <View style={styles.typeSelector}>
+          {[
+            { id: "own", label: "My money" },
+            { id: "father", label: "Dad's money" },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[styles.typeButton, source === option.id && styles.typeButtonActive]}
+              onPress={() => {
+                setSource(option.id);
+                if (option.id === "father") setIsExpense(true);
+                if (option.id === "father" && selectedCategory === "Income") setSelectedCategory("");
+              }}
+            >
+              <Text style={[styles.typeButtonText, source === option.id && styles.typeButtonTextActive]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {source === "own" && <View style={styles.typeSelector}>
           {/* EXPENSE SELECTOR */}
           <TouchableOpacity
             style={[styles.typeButton, isExpense && styles.typeButtonActive]}
@@ -132,7 +163,11 @@ const CreateScreen = () => {
               Income
             </Text>
           </TouchableOpacity>
-        </View>
+        </View>}
+
+        {source === "father" && (
+          <Text style={styles.sectionTitle}>Spending</Text>
+        )}
 
         {/* AMOUNT CONTAINER */}
         <View style={styles.amountContainer}>
@@ -170,7 +205,7 @@ const CreateScreen = () => {
         </Text>
 
         <View style={styles.categoryGrid}>
-          {CATEGORIES.map((category) => (
+          {CATEGORIES.filter((category) => source === "own" || category.id !== "income").map((category) => (
             <TouchableOpacity
               key={category.id}
               style={[

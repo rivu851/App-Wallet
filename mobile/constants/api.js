@@ -1,2 +1,3 @@
-export const API_URL = "https://wallet-cw2x.onrender.com/api";
-// export const API_URL = "";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001";
+
+export const API_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api`;

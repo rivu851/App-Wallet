@@ -69,6 +69,67 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 4,
   },
+  historyButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  connectionStatus: {
+    alignItems: "flex-end",
+    marginTop: -10,
+    marginBottom: 8,
+  },
+  connectionText: {
+    color: COLORS.textLight,
+    fontSize: 12,
+  },
+  sourceTabs: {
+    flexDirection: "row",
+    backgroundColor: COLORS.border,
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 14,
+  },
+  sourceTab: {
+    flex: 1,
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  sourceTabActive: {
+    backgroundColor: COLORS.card,
+  },
+  sourceTabText: {
+    color: COLORS.textLight,
+    fontWeight: "500",
+  },
+  sourceTabTextActive: {
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  undoBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: COLORS.card,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  undoText: {
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  undoAction: {
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
   logoutButton: {
     padding: 10,
     borderRadius: 20,
@@ -124,6 +185,22 @@ export const styles = StyleSheet.create({
   balanceStatAmount: {
     fontSize: 18,
     fontWeight: "600",
+  },
+  periodStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 12,
+    marginTop: 12,
+  },
+  periodStatItem: {
+    flex: 1,
+  },
+  periodStatAmount: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginTop: 3,
   },
   sectionTitle: {
     fontSize: 18,
@@ -190,6 +267,13 @@ export const styles = StyleSheet.create({
     padding: 15,
     borderLeftWidth: 1,
     borderLeftColor: COLORS.border,
+  },
+  transactionActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    padding: 12,
   },
   transactionsContainer: {
     marginBottom: 20,
