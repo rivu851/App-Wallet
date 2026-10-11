@@ -15,7 +15,7 @@ const CATEGORY_ICONS = {
   Other: "ellipsis-horizontal",
 };
 
-export const TransactionItem = ({ item, onDelete }) => {
+export const TransactionItem = ({ item, onDelete, onEdit }) => {
   const isIncome = parseFloat(item.amount) > 0;
   const iconName = CATEGORY_ICONS[item.category] || "pricetag-outline";
 
@@ -27,7 +27,9 @@ export const TransactionItem = ({ item, onDelete }) => {
         </View>
         <View style={styles.transactionLeft}>
           <Text style={styles.transactionTitle}>{item.title}</Text>
-          <Text style={styles.transactionCategory}>{item.category}</Text>
+          <Text style={styles.transactionCategory}>
+            {item.category} · {item.source === "father" ? "Dad's money" : "My money"}
+          </Text>
         </View>
         <View style={styles.transactionRight}>
           <Text
@@ -35,12 +37,21 @@ export const TransactionItem = ({ item, onDelete }) => {
           >
             {isIncome ? "+" : "-"}Rs{Math.abs(parseFloat(item.amount)).toFixed(2)}
           </Text>
-          <Text style={styles.transactionDate}>{formatDate(item.created_at)}</Text>
+          <Text style={styles.transactionDate}>
+            {item.pending_sync ? "Waiting to sync" : formatDate(item.created_at)}
+          </Text>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(item.id)}>
-        <Ionicons name="trash-outline" size={20} color={COLORS.expense} />
-      </TouchableOpacity>
+      {!item.pending_sync && (
+        <View style={styles.transactionActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => onEdit(item)}>
+            <Ionicons name="create-outline" size={19} color={COLORS.textLight} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(item.id)}>
+            <Ionicons name="trash-outline" size={20} color={COLORS.expense} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };

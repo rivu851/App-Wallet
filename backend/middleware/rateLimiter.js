@@ -15,7 +15,10 @@ const rateLimiter = async(req, res, next)=>{
 
     } catch (error) {
         console.log("Rate limit error", error)
-        next(error)
+        if (process.env.NODE_ENV === "production") {
+            return res.status(503).json({ message: "Rate limiting service unavailable" });
+        }
+        next();
     }
 }
 
